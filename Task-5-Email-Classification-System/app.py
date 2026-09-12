@@ -24,21 +24,14 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 
-# ----------------------------------------------------------------------
-# Page configuration
-# ----------------------------------------------------------------------
+
 st.set_page_config(
     page_title="AI Email Classification System",
     page_icon="📧",
     layout="wide",
 )
 
-# ----------------------------------------------------------------------
-# --- User Authentication -----------------------------------------------
-# Simple username/password gate for demo purposes. For production use,
-# replace with OAuth / a managed identity provider / streamlit-authenticator
-# with hashed credentials.
-# ----------------------------------------------------------------------
+
 DEMO_USERS = {
     "admin": "admin123",
     "user": "user123",
@@ -76,20 +69,32 @@ if not st.session_state["authenticated"]:
 # ----------------------------------------------------------------------
 # --- Load model artifacts (with error handling) ------------------------
 # ----------------------------------------------------------------------
+# Resolve paths relative to THIS script's own folder, not the process's
+# working directory. This matters because on Streamlit Cloud (and some
+# other hosts) the app can be launched from the repo root even when
+# app.py lives in a subfolder, which would otherwise break plain
+# filenames like "model.pkl".
+APP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _path(filename):
+    return os.path.join(APP_DIR, filename)
+
+
 @st.cache_resource
 def load_artifacts():
     errors = []
     model, vectorizer, metrics = None, None, {}
     try:
-        model = joblib.load("model.pkl")
+        model = joblib.load(_path("model.pkl"))
     except Exception as e:
         errors.append(f"Could not load model.pkl: {e}")
     try:
-        vectorizer = joblib.load("vectorizer.pkl")
+        vectorizer = joblib.load(_path("vectorizer.pkl"))
     except Exception as e:
         errors.append(f"Could not load vectorizer.pkl: {e}")
     try:
-        with open("metrics.json", "r") as f:
+        with open(_path("metrics.json"), "r") as f:
             metrics = json.load(f)
     except Exception as e:
         errors.append(f"Could not load metrics.json: {e}")
@@ -281,8 +286,9 @@ elif page == "Model Performance":
             ("model_comparison.png", "Model Comparison"),
             ("class_distribution.png", "Class Distribution"),
         ]:
-            if os.path.exists(img_name):
-                st.image(img_name, caption=caption, use_container_width=True)
+            img_path = _path(img_name)
+            if os.path.exists(img_path):
+                st.image(img_path, caption=caption, use_container_width=True)
 
 # ----------------------------------------------------------------------
 # --- Page: About / Documentation ------------------------------------------
